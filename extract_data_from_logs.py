@@ -6,6 +6,7 @@ import pandas as pd
 
 
 PATH_TO_7ZIP = r"C:\Program Files\7-Zip\7z.exe"  # change this to the path to 7z.exe on your system
+BAD_FOLDERS = ['HUC12_0101_base_rc_alg_imp', 'archive']
 
 
 def unzip_logbooks(data_path, out_dir):
@@ -78,11 +79,12 @@ def merge_rating_curves(data_path, out_path):
     print('Scanning for rc_logbook.csv files...')
     logbook_file_list = list()
     for root, dirs, files in os.walk(data_path):
-        if 'rc_logbook.csv' in files:
+        if 'rc_logbook.csv' in files and os.path.split(root)[-1] not in BAD_FOLDERS:
             logbook_file_list.append(os.path.join(root, 'rc_logbook.csv'))
     
     # Load each file and filter it
     print('Filtering files...')
+    reach_log = set()
     counter = 1
     for logbook_file in logbook_file_list:
         print(f'{counter}/{len(logbook_file_list)}', end='\r')
@@ -92,6 +94,11 @@ def merge_rating_curves(data_path, out_path):
             continue
 
         tmp_data = pd.read_csv(logbook_file)
+        reaches = set(tmp_data['REACH'].unique())
+        if len(reaches.intersection(reach_log)) > 0:
+            raise RuntimeError(f'Reaches are overlapping between basins: {reaches.intersection(reach_log)}')
+        else:
+            reach_log.update(reaches)
         tmp_data['TOPWIDTH'] = tmp_data['SA'] / tmp_data['LENGTH']
         tmp_data['XSAREA'] = tmp_data['VOLUME'] / tmp_data['LENGTH']
         tmp_data = tmp_data.drop(columns=['RESOLUTION', 'N_SIM', 'LENGTH', 'XS_AREA', 'H_RADIUS', 'DISCHARGE', 'SA', 'VOLUME'])
@@ -129,20 +136,26 @@ def merge_ri_stages(data_path, out_path):
     print('Scanning for RIstage_logbook.csv files...')
     logbook_file_list = list()
     for root, dirs, files in os.walk(data_path):
-        if 'RIstage_logbook.csv' in files and os.path.split(root)[-1] != 'archive':
+        if 'RIstage_logbook.csv' in files and os.path.split(root)[-1] not in BAD_FOLDERS:
             logbook_file_list.append(os.path.join(root, 'RIstage_logbook.csv'))
     
     # Load each file and filter it
     print('Filtering files...')
+    reach_log = set()
     counter = 1
     for logbook_file in logbook_file_list:
         print(f'{counter}/{len(logbook_file_list)}', end='\r')
         counter += 1
         tmp_filtered_path = logbook_file.replace('RIstage_logbook.csv', 'filtered_stages.csv')
-        # if os.path.exists(tmp_filtered_path):
-        #     continue
+        if os.path.exists(tmp_filtered_path):
+            continue
 
         tmp_data = pd.read_csv(logbook_file)
+        reaches = set(tmp_data['REACH'].unique())
+        if len(reaches.intersection(reach_log)) > 0:
+            raise RuntimeError(f'Reaches are overlapping between basins: {reaches.intersection(reach_log)}')
+        else:
+            reach_log.update(reaches)
         tmp_data = tmp_data.astype({'REACH': 'int', 'RI': 'int', 'STAGE': 'float', 'Q': 'float'})
         tmp_data = tmp_data.drop(columns=['RESOLUTION', 'N_SIM'])
         aggregated = tmp_data.groupby(['REACH', 'RI']).agg({'Q': 'median', 'STAGE': 'median'}).reset_index()
@@ -205,20 +218,20 @@ def extract_data(data_path):
     # Unzip all files
     unzip_dir = os.path.join(working_dir, 'unzipped_logs')
     os.makedirs(unzip_dir, exist_ok=True)
-    # unzip_logbooks(data_path, unzip_dir)
-    # unzip_drainage_areas(data_path, unzip_dir)
+    unzip_logbooks(data_path, unzip_dir)
+    unzip_drainage_areas(data_path, unzip_dir)
 
     # Filter and merge all logbooks
     merged_rc_path = os.path.join(working_dir, 'merged_rating_curves.csv')
-    # merge_rating_curves(unzip_dir, merged_rc_path)
+    merge_rating_curves(unzip_dir, merged_rc_path)
     merge_ri_path = os.path.join(working_dir, 'merged_ri_stages.csv')
     merge_ri_stages(unzip_dir, merge_ri_path)
     da_path = os.path.join(working_dir, 'drainage_areas.csv')
-    # merge_das(unzip_dir, da_path)
+    merge_das(unzip_dir, da_path)
 
     # Clean up workspace
     print('Cleaning up...')
-    # shutil.rmtree(unzip_dir)
+    shutil.rmtree(unzip_dir)
 
     print(f'Finished processing data.')
     print(f'Rating curve data saved to {merged_rc_path}')
