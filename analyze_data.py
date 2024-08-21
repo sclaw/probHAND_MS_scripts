@@ -2,8 +2,6 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
 
 
 def derive_variables(rc_path, ri_path, bkf_path, out_path):
