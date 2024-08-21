@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 import subprocess
 import pandas as pd
 
@@ -32,7 +33,7 @@ def unzip_files(data_path, out_dir):
         basin_name = os.path.split(os.path.dirname(os.path.dirname(zipped_file)))[-1]
         tmp_out_dir = os.path.join(out_dir, basin_name)
         os.makedirs(tmp_out_dir, exist_ok=True)
-        subprocess.run([PATH_TO_7ZIP, 'x', zipped_file, f'-o{tmp_out_dir}', 'Output_Logbooks/*'])
+        subprocess.run([PATH_TO_7ZIP, 'x', zipped_file, f'-o{tmp_out_dir}', 'Output_Logbooks/*', '-aos'])
 
 
 def merge_rating_curves(data_path, out_path):
@@ -156,6 +157,10 @@ def extract_data(data_path):
     merge_rating_curves(unzip_dir, merged_rc_path)
     merge_ri_path = os.path.join(working_dir, 'merged_ri_stages.csv')
     merge_ri_stages(unzip_dir, merge_ri_path)
+
+    # Clean up workspace
+    print('Cleaning up...')
+    shutil.rmtree(unzip_dir)
 
     print(f'Finished processing data.')
     print(f'Rating curve data saved to {merged_rc_path}')
