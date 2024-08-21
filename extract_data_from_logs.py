@@ -162,6 +162,32 @@ def merge_ri_stages(data_path, out_path):
     print()
 
 
+def merge_das(data_path, out_path):
+    """Merge all drainage areas from Stream_Stats_NHD.csv files
+
+    Args:
+        data_path (str): Directory containing all Stream_Stats_NHD.csv files to merge
+        out_path (str): Path to save merged data to
+    """
+    # Search all subdirectories for Stream_Stats_NHD.csv files
+    print('Scanning for Stream_Stats_NHD.csv files...')
+    logbook_file_list = list()
+    for root, dirs, files in os.walk(data_path):
+        if 'Stream_Stats_NHD.csv' in files:
+            logbook_file_list.append(os.path.join(root, 'Stream_Stats_NHD.csv'))
+
+    # Load each file and join them
+    print('Merging files...')
+    merged_data = pd.DataFrame()
+    counter = 1
+    for logbook_file in logbook_file_list:
+        print(f'{counter}/{len(logbook_file_list)}', end='\r')
+        counter += 1
+        tmp_data = pd.read_csv(logbook_file)[['Name', 'AreaSqMi']].drop_duplicates()
+        merged_data = pd.concat([merged_data, tmp_data])
+    merged_data.to_csv(out_path, index=False)
+    print()
+
 def extract_data(data_path):
     """Extracts data from probHAND zipped run logs
     
@@ -179,12 +205,15 @@ def extract_data(data_path):
     unzip_dir = os.path.join(working_dir, 'unzipped_logs')
     os.makedirs(unzip_dir, exist_ok=True)
     unzip_logbooks(data_path, unzip_dir)
+    unzip_drainage_areas(data_path, unzip_dir)
 
     # Filter and merge all logbooks
     merged_rc_path = os.path.join(working_dir, 'merged_rating_curves.csv')
     merge_rating_curves(unzip_dir, merged_rc_path)
     merge_ri_path = os.path.join(working_dir, 'merged_ri_stages.csv')
     merge_ri_stages(unzip_dir, merge_ri_path)
+    da_path = os.path.join(working_dir, 'drainage_areas.csv')
+    merge_das(unzip_dir, da_path)
 
     # Clean up workspace
     print('Cleaning up...')
@@ -193,6 +222,7 @@ def extract_data(data_path):
     print(f'Finished processing data.')
     print(f'Rating curve data saved to {merged_rc_path}')
     print(f'RI stage data saved to {merge_ri_path}')
+    print(f'Drainage area data saved to {da_path}')
 
 if __name__ == '__main__':
     data_path = sys.argv[1]
