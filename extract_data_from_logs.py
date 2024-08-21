@@ -8,7 +8,7 @@ import pandas as pd
 PATH_TO_7ZIP = r"C:\Program Files\7-Zip\7z.exe"  # change this to the path to 7z.exe on your system
 
 
-def unzip_files(data_path, out_dir):
+def unzip_logbooks(data_path, out_dir):
     """Unzip data from logs
     
     Iterates through all available directories and subdirectories 
@@ -34,6 +34,34 @@ def unzip_files(data_path, out_dir):
         tmp_out_dir = os.path.join(out_dir, basin_name)
         os.makedirs(tmp_out_dir, exist_ok=True)
         subprocess.run([PATH_TO_7ZIP, 'x', zipped_file, f'-o{tmp_out_dir}', 'Output_Logbooks/*', '-aos'])
+
+
+def unzip_drainage_areas(data_path, out_dir):
+    """Unzip drainage areas from Stream_Stats_NHD
+    
+    Iterates through all available directories and subdirectories 
+    looking for Stream_Stats_NHD.csv files to unzip.
+
+    Args:
+        data_path (str): path to the folder containing zipped data files from probHAND run
+        out_dir (str): path to the folder where files will be unzipped to
+    """
+    # search all subdirectories for "model_files.7z"
+    print('Scanning for model_files.7z files...')
+    zipped_file_list = list()
+    for root, dirs, files in os.walk(data_path):
+        if 'model_files.7z' in files:
+            zipped_file_list.append(os.path.join(root, 'model_files.7z'))
+    
+    # Extract Output_Logbooks folder from each zipped file
+    print('Unzipping files...')
+    counter = 1
+    for zipped_file in zipped_file_list:
+        print(f'{counter}/{len(zipped_file_list)}', end='\r')
+        basin_name = os.path.split(os.path.dirname(os.path.dirname(zipped_file)))[-1]
+        tmp_out_dir = os.path.join(out_dir, basin_name)
+        os.makedirs(tmp_out_dir, exist_ok=True)
+        subprocess.run([PATH_TO_7ZIP, 'x', zipped_file, f'-o{tmp_out_dir}', 'Stream_Stats/Stream_Stats_NHD.csv', '-aos'])
 
 
 def merge_rating_curves(data_path, out_path):
@@ -150,9 +178,9 @@ def extract_data(data_path):
     # Unzip all files
     unzip_dir = os.path.join(working_dir, 'unzipped_logs')
     os.makedirs(unzip_dir, exist_ok=True)
-    unzip_files(data_path, unzip_dir)
+    unzip_logbooks(data_path, unzip_dir)
 
-    # Filter and merge all files
+    # Filter and merge all logbooks
     merged_rc_path = os.path.join(working_dir, 'merged_rating_curves.csv')
     merge_rating_curves(unzip_dir, merged_rc_path)
     merge_ri_path = os.path.join(working_dir, 'merged_ri_stages.csv')
