@@ -31,16 +31,17 @@ def derive_variables(rc_path, ri_path, bkf_path, out_path):
 
     # Initialize output data
     ris = np.sort(ri_data['RI'].unique())
-    section_width_cols = [f'Q{x}_Total_Width' for x in ris]
-    channel_width_cols = [f'Q{x}_Ch_Width' for x in ris]
-    overbank_width_cols = [f'Q{x}_OB_Width' for x in ris]
-    section_vol_cols = [f'Q{x}_Total_Area' for x in ris]
-    channel_vol_cols = [f'Q{x}_Ch_Area' for x in ris]
-    overbank_vol_cols = [f'Q{x}_OB_Area' for x in ris]
-    section_ssp_cols = [f'Q{x}_Total_SSP' for x in ris]
-    channel_ssp_cols = [f'Q{x}_Ch_SSP' for x in ris]
-    overbank_ssp_cols = [f'Q{x}_OB_SSP' for x in ris]
-    all_cols = channel_width_cols + overbank_width_cols + channel_vol_cols + overbank_vol_cols + channel_ssp_cols + overbank_ssp_cols
+    discharge_cols = [f'Q{x}(m3/s)' for x in ris]
+    section_width_cols = [f'Q{x}_Total_Width(m)' for x in ris]
+    channel_width_cols = [f'Q{x}_Ch_Width(m)' for x in ris]
+    overbank_width_cols = [f'Q{x}_OB_Width(m)' for x in ris]
+    section_vol_cols = [f'Q{x}_Total_Area(m2)' for x in ris]
+    channel_vol_cols = [f'Q{x}_Ch_Area(m2)' for x in ris]
+    overbank_vol_cols = [f'Q{x}_OB_Area(m2)' for x in ris]
+    section_ssp_cols = [f'Q{x}_Total_SSP(W/m2)' for x in ris]
+    channel_ssp_cols = [f'Q{x}_Ch_SSP(W/m2)' for x in ris]
+    overbank_ssp_cols = [f'Q{x}_OB_SSP(W/m2)' for x in ris]
+    all_cols = ['slope(m/m)'] + discharge_cols + channel_width_cols + overbank_width_cols + channel_vol_cols + overbank_vol_cols + channel_ssp_cols + overbank_ssp_cols
     out_data = pd.DataFrame(index=reaches, columns=all_cols)
 
     # Run
@@ -50,8 +51,10 @@ def derive_variables(rc_path, ri_path, bkf_path, out_path):
         counter += 1
         rc_subset = pd.DataFrame(rc_data.loc[r])
         ri_subset = pd.DataFrame(ri_data.loc[r]).sort_values('RI')
+        out_data.loc[r, discharge_cols] = ri_subset['Q'].values
         tmp_bkf_stage = bkf_data.loc[r, 'BankfullDepth']
         tmp_slope = rc_subset['SLOPE'].values[0]
+        out_data.loc[r, 'slope(m/m)'] = tmp_slope
 
         # Separate channel and overbank series
         bkf_tw = np.interp(tmp_bkf_stage, rc_subset['STAGE'], rc_subset['TOPWIDTH'])
