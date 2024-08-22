@@ -17,6 +17,8 @@ def make_dataset(data_path):
     drainage_areas_path = os.path.join(working_dir, 'drainage_areas.csv')
     phys_regions_path = os.path.join(working_dir, 'phys_regions.csv')
     bankfull_path = os.path.join(working_dir, 'bankfull_depths.csv')
+    ir_path = os.path.join(working_dir, 'incision_ratios.csv')
+    soils_path = os.path.join(working_dir, 'soils.csv')
 
     metadata = pd.read_csv(metadata_path)
     metadata['Code'] = metadata['Code'].astype(int).astype(str)
@@ -34,6 +36,14 @@ def make_dataset(data_path):
     bankfull = pd.read_csv(bankfull_path)
     bankfull['REACH'] = bankfull['REACH'].astype(int).astype(str)
     bankfull = bankfull.set_index('REACH')
+    ir = pd.read_csv(ir_path)
+    ir['Code'] = ir['Code'].astype(int).astype(str)
+    ir = ir.set_index('Code')
+    ir = ir[['MEAN_bankdist_r','MEDIAN_bankdist_r','MEAN_bankdist_e','MEDIAN_bankdist_e','MEDIAN_IR','LAKE']]
+    soils = pd.read_csv(soils_path)
+    soils['Code'] = soils['Code'].astype(int).astype(str)
+    soils = soils.set_index('Code')
+    soils = soils.drop(columns=['FID'])
 
     # Modify some fields
     drainage_areas['DrainArea(sqkm)'] = drainage_areas['AreaSqMi'] * 2.58999
@@ -47,6 +57,8 @@ def make_dataset(data_path):
     merged = merged.join(phys_regions)
     merged = merged.join(bankfull)
     merged = merged.join(interpolated)
+    merged = merged.join(ir)
+    merged = merged.join(soils)
 
     # Save the merged dataset
     out_path = os.path.join(working_dir, 'all_data.csv')
