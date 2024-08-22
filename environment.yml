@@ -1,0 +1,6 @@
+name: floodplains_ms
+dependencies:
+  - numpy
+  - pandas
+  - geopandas
+  - matplotlib
